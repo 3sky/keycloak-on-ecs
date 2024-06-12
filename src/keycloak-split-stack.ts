@@ -1,27 +1,27 @@
 import * as cdk from 'aws-cdk-lib';
-import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as rds from 'aws-cdk-lib/aws-rds';
-import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
+
+import { Construct } from 'constructs';
 
 export class KeycloakSplitStack extends cdk.Stack {
   public readonly auroraCluster: rds.DatabaseCluster;
   public readonly privateSecurityGroup: ec2.SecurityGroup;
   public readonly listener: elbv2.ApplicationListener;
   public readonly ecsCluster: ecs.Cluster;
-  public readonly albSecurityGroup: ec2.SecurityGroup;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    cdk.Tags.of(this).add("description", "Keycloak Demo");
-    cdk.Tags.of(this).add("organization", "3sky.dev");
-    cdk.Tags.of(this).add("owner", "3sky");
+    cdk.Tags.of(this).add('description', 'Keycloak Demo');
+    cdk.Tags.of(this).add('organization', '3sky.dev');
+    cdk.Tags.of(this).add('owner', '3sky');
 
 
     const vpc = new ec2.Vpc(this, 'VPC', {
-      ipAddresses: ec2.IpAddresses.cidr("10.192.0.0/20"),
+      ipAddresses: ec2.IpAddresses.cidr('10.192.0.0/20'),
       maxAzs: 2,
       enableDnsHostnames: true,
       enableDnsSupport: true,
@@ -29,17 +29,17 @@ export class KeycloakSplitStack extends cdk.Stack {
       subnetConfiguration: [
         {
           cidrMask: 28,
-          name: "public",
+          name: 'public',
           subnetType: ec2.SubnetType.PUBLIC,
         },
         {
           cidrMask: 28,
-          name: "private",
+          name: 'private',
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
         },
         {
           cidrMask: 28,
-          name: "database",
+          name: 'database',
           subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
         },
       ],
@@ -68,8 +68,8 @@ export class KeycloakSplitStack extends cdk.Stack {
 
     auroraSecurityGroup.addIngressRule(
       this.privateSecurityGroup,
-      ec2.Port.tcp(3306),
-      'Allow MySQL access from private network'
+      ec2.Port.tcp(5432),
+      'Allow MySQL access from private network',
     );
 
     const alb = new elbv2.ApplicationLoadBalancer(this, 'ApplicationLB', {
@@ -93,21 +93,21 @@ export class KeycloakSplitStack extends cdk.Stack {
       credentials: {
         username: 'keycloak',
         // WARNING: This is wrong, do not work this way
-        password: cdk.SecretValue.unsafePlainText('password')
+        password: cdk.SecretValue.unsafePlainText('password'),
       },
       // NOTE: use this rather for testing
       deletionProtection: false,
       securityGroups: [
-        auroraSecurityGroup
+        auroraSecurityGroup,
       ],
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_ISOLATED
+        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
       },
-      engine: rds.DatabaseClusterEngine.auroraMysql({
-        version: rds.AuroraMysqlEngineVersion.VER_3_05_2
+      engine: rds.DatabaseClusterEngine.auroraPostgres({
+        version: rds.AuroraPostgresEngineVersion.VER_16_1,
       }),
       writer: rds.ClusterInstance.serverlessV2('ClusterInstance', {
-        scaleWithWriter: true
+        scaleWithWriter: true,
       }),
     });
 
@@ -117,6 +117,6 @@ export class KeycloakSplitStack extends cdk.Stack {
       containerInsights: true,
       enableFargateCapacityProviders: true,
       vpc: vpc,
-    })
+    });
   }
 }

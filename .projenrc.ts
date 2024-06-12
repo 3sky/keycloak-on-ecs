@@ -4,10 +4,21 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   defaultReleaseBranch: 'main',
   name: 'keycloak-split',
   projenrcTs: true,
-
-  // deps: [],                /* Runtime dependencies of this module. */
-  // description: undefined,  /* The description is just a string that helps people understand the purpose of the package. */
-  // devDeps: [],             /* Build dependencies for this module. */
+  repository: 'https://github.com/3sky/cdk-ecs-keycloak.git',
+  //  tsconfig: {
+  //    include: ['bin/**/*.ts', 'lib/**/*.ts'],
+  //    exclude: ['node_modules'],
+  //  },
+  keywords: [
+    'ecs',
+    'fargate',
+    'keycloak',
+  ],
+  devDeps: [
+    'aws-cdk',
+    'ts-node',
+  ],
+  description: 'Setup keyclaok on ECS with Serverless Database',
   // packageName: undefined,  /* The "name" in package.json. */
 });
 project.synth();

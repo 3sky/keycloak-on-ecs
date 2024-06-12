@@ -1,23 +1,15 @@
-import { App, Stack, StackProps } from 'aws-cdk-lib';
-import { Construct } from 'constructs';
+#!/usr/bin/env node
+import * as cdk from 'aws-cdk-lib';
+import { ECSStack } from './ecs-stack';
+import { KeycloakSplitStack } from './keycloak-split-stack';
 
-export class MyStack extends Stack {
-  constructor(scope: Construct, id: string, props: StackProps = {}) {
-    super(scope, id, props);
+const app = new cdk.App();
+const main = new KeycloakSplitStack(app, 'KeycloakSplitStack', {});
 
-    // define resources here...
-  }
-}
+new ECSStack(app, 'ECSStack', {
 
-// for development, use account/region from cdk cli
-const devEnv = {
-  account: process.env.CDK_DEFAULT_ACCOUNT,
-  region: process.env.CDK_DEFAULT_REGION,
-};
-
-const app = new App();
-
-new MyStack(app, 'keycloak-split-dev', { env: devEnv });
-// new MyStack(app, 'keycloak-split-prod', { env: prodEnv });
-
-app.synth();
+  dbCluster: main.auroraCluster,
+  sg: main.privateSecurityGroup,
+  listener: main.listener,
+  ecsCluster: main.ecsCluster,
+});
