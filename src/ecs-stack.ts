@@ -3,6 +3,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as rds from 'aws-cdk-lib/aws-rds';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
 export interface ECSStackProps extends cdk.StackProps {
@@ -10,8 +11,8 @@ export interface ECSStackProps extends cdk.StackProps {
   sg: ec2.SecurityGroup;
   listener: elbv2.ApplicationListener;
   ecsCluster: ecs.Cluster;
+  secret: secretsmanager.Secret;
 }
-
 
 export class ECSStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ECSStackProps) {
@@ -21,21 +22,21 @@ export class ECSStack extends cdk.Stack {
     const theSG = props.sg;
     const theListner = props.listener;
     const theCluster = props.ecsCluster;
+    const theSecret = props.secret;
 
     cdk.Tags.of(this).add('description', 'Keycloak Demo');
     cdk.Tags.of(this).add('organization', '3sky.dev');
     cdk.Tags.of(this).add('owner', '3sky');
 
-    let CUSTOM_IMAGE: string = 'quay.io/3sky/keycloak-aurora:latest';
+    let CUSTOM_IMAGE: string = 'quay.io/3sky/keycloak-aurora:25.0.1';
 
     const ecsTaskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDefinition', {
-      memoryLimitMiB: 1024,
-      cpu: 512,
+      memoryLimitMiB: 2048,
+      cpu: 1024,
       runtimePlatform: {
         operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
         cpuArchitecture: ecs.CpuArchitecture.X86_64,
       },
-
     });
 
     ecsTaskDefinition.addContainer('keycloak', {
@@ -44,18 +45,19 @@ export class ECSStack extends cdk.Stack {
         KEYCLOAK_ADMIN: 'admin',
         KEYCLOAK_ADMIN_PASSWORD: 'admin',
         KC_DB: 'postgres',
-        KC_DB_URL: 'jdbc:aws-wrapper:postgresql://' + theAurora.clusterEndpoint.hostname + ':5432/keycloak',
-        C_DB_USERNAME: 'keycloak',
-        KC_DB_PASSWORD: 'password',
-        KC_HOSTNAME_STRICT: 'false',
-        KC_HTTP_ENABLED: 'true',
+        KC_DB_URL: 'jdbc:postgresql://' + theAurora.clusterEndpoint.hostname + ':5432/keycloak',
+        KC_DB_USERNAME: 'keycloak',
+        KC_DB_PASSWORD: theSecret.secretValueFromJson('password').toString(),
         KC_DB_DRIVER: 'software.amazon.jdbc.Driver',
-        KC_HOSTNAME: 'sso.3sky.in',
-        KC_LOG_LEVEL: 'DEBUG',
+        KC_HEALTH_ENABLED: 'true',
       },
       portMappings: [
         {
-          containerPort: 8080,
+          containerPort: 8443,
+          protocol: ecs.Protocol.TCP,
+        },
+        {
+          containerPort: 9000,
           protocol: ecs.Protocol.TCP,
         },
       ],
@@ -74,18 +76,16 @@ export class ECSStack extends cdk.Stack {
       ],
     });
 
-    ecsService.registerLoadBalancerTargets(
-      {
-        containerName: 'keycloak',
-        containerPort: 8080,
-        newTargetGroupId: 'ECS',
-        listener:
-          ecs.ListenerConfig.applicationListener(theListner, {
-            protocol: elbv2.ApplicationProtocol.HTTP,
-          }),
+    theListner.addTargets('ECS', {
+      port: 8443,
+      targets: [ecsService],
+      healthCheck: {
+        port: '9000',
+        path: '/health',
+        interval: cdk.Duration.seconds(30),
+        timeout: cdk.Duration.seconds(5),
+        healthyHttpCodes: '200',
       },
-    );
-
-
+    });
   }
 }

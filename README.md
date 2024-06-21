@@ -1,14 +1,13 @@
-# Welcome to your CDK TypeScript project
+# Run Keycloak on ECS
 
-This is a blank project for CDK development with TypeScript.
+Small repo with AWS CDK code, for setting up
+[keycloak](https://github.com/keycloak/keycloak) on ECS with usage on AWS Aurora PostgreSQL.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+Containers are based on custom and publicly available on [quay](https://quay.io/repository/3sky/keycloak-aurora).
 
-## Useful commands
+Setup is tested with keylock base images:
+- 24.0
+- 25.0.1
 
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `npx cdk deploy`  deploy this stack to your default AWS account/region
-* `npx cdk diff`    compare deployed stack with current state
-* `npx cdk synth`   emits the synthesized CloudFormation template
+As always code is backed via blog post, which can be found [here](https://blog.3sky.dev/article/202407-keycloak-install/).
+
