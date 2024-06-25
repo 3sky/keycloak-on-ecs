@@ -28,7 +28,7 @@ export class ECSStack extends cdk.Stack {
     cdk.Tags.of(this).add('organization', '3sky.dev');
     cdk.Tags.of(this).add('owner', '3sky');
 
-    let CUSTOM_IMAGE: string = 'quay.io/3sky/keycloak-aurora:25.0.1';
+    let CUSTOM_IMAGE: string = 'quay.io/3sky/keycloak-aurora:latest';
 
     const ecsTaskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDefinition', {
       memoryLimitMiB: 2048,
@@ -44,12 +44,12 @@ export class ECSStack extends cdk.Stack {
       environment: {
         KEYCLOAK_ADMIN: 'admin',
         KEYCLOAK_ADMIN_PASSWORD: 'admin',
-        KC_DB: 'postgres',
-        KC_DB_URL: 'jdbc:postgresql://' + theAurora.clusterEndpoint.hostname + ':5432/keycloak',
         KC_DB_USERNAME: 'keycloak',
         KC_DB_PASSWORD: theSecret.secretValueFromJson('password').toString(),
-        KC_DB_DRIVER: 'software.amazon.jdbc.Driver',
         KC_HEALTH_ENABLED: 'true',
+        KC_HOSTNAME_STRICT: 'false',
+        KC_DB: 'postgres',
+        KC_DB_URL: 'jdbc:aws-wrapper:postgresql://' + theAurora.clusterEndpoint.hostname + ':5432/keycloak',
       },
       portMappings: [
         {
